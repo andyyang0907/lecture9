@@ -47,6 +47,8 @@ class BookCover extends StatelessWidget {
             child: Text(
               book.mark,
               style: TextStyle(
+                fontFamily: 'Roboto',
+                decoration: TextDecoration.none,
                 fontSize: showTitle ? 96 : 46,
                 fontWeight: FontWeight.w900,
                 color: Colors.white.withValues(alpha: 0.22),
@@ -57,6 +59,8 @@ class BookCover extends StatelessWidget {
             child: Text(
               book.mark,
               style: TextStyle(
+                fontFamily: 'Roboto',
+                decoration: TextDecoration.none,
                 fontSize: showTitle ? 72 : 30,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
@@ -73,7 +77,9 @@ class BookCover extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                      color: Colors.white,
+                  fontFamily: 'Roboto',
+                  decoration: TextDecoration.none,
+                  color: Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),

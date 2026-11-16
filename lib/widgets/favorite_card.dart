@@ -6,9 +6,10 @@ import 'book_cover.dart';
 
 /// 参数化复用组件：收藏列表项。
 ///
-/// 当前版本每个卡片在 initState 里各自创建 AnimationController 做心跳光晕，
-/// 这是实践指南九“反例一”的活体版（EX19 同款），待排查修复。
-class FavoriteCard extends StatefulWidget {
+/// 修复后不再为每个条目创建 AnimationController：
+/// 收藏高亮交给隐式动画 AnimatedScale / AnimatedContainer，生命周期由框架托管，
+/// 列表滚动时不会反复创建、销毁控制器，也不会因动画重建而闪烁。
+class FavoriteCard extends StatelessWidget {
   const FavoriteCard({
     super.key,
     required this.book,
@@ -23,46 +24,26 @@ class FavoriteCard extends StatefulWidget {
   final VoidCallback onLongPress;
 
   @override
-  State<FavoriteCard> createState() => _FavoriteCardState();
-}
-
-class _FavoriteCardState extends State<FavoriteCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    AppMetrics.favoriteCardsBuilt++;
-    AppMetrics.controllersCreated++;
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-  }
-
-  // 待排查：这里缺少 dispose，页面滚出后控制器仍在每帧空转。
-
-  @override
   Widget build(BuildContext context) {
+    AppMetrics.favoriteCardsBuilt++;
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Material(
-        color: theme.colorScheme.surface,
+        color: favorite ? const Color(0xFFF3F0FF) : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: widget.onTap,
-          onLongPress: widget.onLongPress,
+          onTap: onTap,
+          onLongPress: onLongPress,
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Hero(
-                  tag: widget.book.heroTag,
-                  child: BookCover(book: widget.book, width: 72, height: 96),
+                  tag: book.heroTag,
+                  child: BookCover(book: book, width: 72, height: 96),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -73,7 +54,7 @@ class _FavoriteCardState extends State<FavoriteCard>
                         children: [
                           Expanded(
                             child: Text(
-                              widget.book.title,
+                              book.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.titleMedium?.copyWith(
@@ -81,20 +62,14 @@ class _FavoriteCardState extends State<FavoriteCard>
                               ),
                             ),
                           ),
-                          ScaleTransition(
-                            scale: Tween<double>(begin: 0.85, end: 1.15)
-                                .animate(
-                                  CurvedAnimation(
-                                    parent: _pulse,
-                                    curve: Curves.easeInOut,
-                                  ),
-                                ),
+                          AnimatedScale(
+                            duration: const Duration(milliseconds: 240),
+                            curve: Curves.easeOutBack,
+                            scale: favorite ? 1.15 : 0.9,
                             child: Icon(
-                              widget.favorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
+                              favorite ? Icons.favorite : Icons.favorite_border,
                               size: 20,
-                              color: widget.favorite
+                              color: favorite
                                   ? const Color(0xFFE64980)
                                   : theme.colorScheme.outline,
                             ),
@@ -103,7 +78,7 @@ class _FavoriteCardState extends State<FavoriteCard>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${widget.book.author} · ${widget.book.year}',
+                        '${book.author} · ${book.year}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -117,24 +92,26 @@ class _FavoriteCardState extends State<FavoriteCard>
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: widget.book.coverColors.first.withValues(
+                              color: book.coverColors.first.withValues(
                                 alpha: 0.10,
                               ),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              widget.book.category,
+                              book.category,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: widget.book.coverColors.first,
+                                color: book.coverColors.first,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                           const Spacer(),
                           Text(
-                            '长按收藏',
+                            favorite ? '已收藏' : '长按收藏',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.outline,
+                              color: favorite
+                                  ? const Color(0xFFE64980)
+                                  : theme.colorScheme.outline,
                             ),
                           ),
                         ],
